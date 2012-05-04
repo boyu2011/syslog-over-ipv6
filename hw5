@@ -1,0 +1,45 @@
+
+CS615A -- Aspects of System Administration - Spring 2012 - HW#5
+
+HW#5: Syslog over IPv6
+
+Summary:
+
+The objective of this assignment is for you to learn how to set up the syslog dæmon to send messages to a remote system as well as to set up and configure an IPv6 tunnel. You will also learn how to use AWS Elastic IP Addresses.
+
+Detail:
+
+Amazon does not currently offer IPv6 connectivity in EC2. However, it is possible to tunnel IPv6 traffic over IPv4 to an external endpoint, from which the packets will travel over the native IPv6 network. Different service providers offer such IPv6 tunnels for free. If you already are a customer of any such provider, then you can use their service, otherwise I recommend you sign up for a free IPv6 tunnel via Hurricane Electric's Tunnelbroker.
+
+Once you have created an account with a tunnel broker, you want to create a new IPv6 tunnel. For that, you will need to know the IPv4 address of the server you wish to connect. In our case, this will be an EC2 instance. Since you are likely to create and recreate instances as you perform this exercise, you want to allocate an elastic IP address, so you can create an IPv6 tunnel with a fixed endpoint that you can then associate with any given instance.
+
+After allocating an elastic IP, you want to bring up an EC2 instance and associate the elastic IP with the instance. After that, set up your IPv6 tunnel to point to your elastic IP. (Note: once the tunnel is set up you can recreate new instances and associate the elastic IP with any one of them without having to change the tunnel.)
+
+With the IPv6 tunnel set up, log in to your EC2 instance and configure it as the IPv6 client endpoint of the tunnel. (HE.net provides configuration examples for how to do that.) If all is set up correctly, you will be able to connect to various IPv6 enabled places on the internet. Use ping6(8), traceroute6(8), and of course tcpdump(1) to verify IPv6 connectivity.
+
+Now that your host is IPv6 enabled, set up the syslogd(8) dæmon to log any and all messages from your instance to the remote syslog server at 2001:470:1c:b8::2. Generate a few test messages and finally generate at least one message saying "<username>'s IPv6 address is <your-global-IPv6-address>" (where <username> is your @stevens.edu username and <your-global-IPv6-address> is the global IPv6 client address of your IPv6 tunnel).
+
+Finally, using the SSH keypair of which you submitted the public key to me earlier, log in on 2001:470:1c:b8::2 (the server's public SSH RSA key fingerprint is 5a:60:c8:ed:04:ad:ef:70:c7:bd:93:53:ef:62:e2:7b) and verify that your syslog messages have been written to /var/log/messages. Then, extract from that file all <username> - <IPv6-address> pairs.
+Deliverables and Due Date
+
+Your deliverable is a single flat text file (plain ascii, preferably created via a unix editor such as vi(1)). The file needs to contain:
+
+your full name
+your @stevens.edu email address
+a description of what you did to complete this assignment
+the simple list of <username> - <IPv6-address> you determined, including the commands you used to process the input file and produce this list
+a summary of what you learned
+This assignment is worth 50 points.
+
+The due date for this assignment is 2012-04-30 18:00. Please attach the file to an email sent from your @stevens.edu email address to jschauma@stevens.edu with a subject of "[CS615] HW5".
+
+Additional no-credit exercises
+
+Now that you have a working IPv6 enabled server, you may wish to consider the following exercises "for fun" (sorry, no extra credits):
+
+repeat exercise #4, but perform all steps using IPv6 only (ie, for example, use ipv6.google.com, or www.netbsd.org)
+review Lecture 07 and repeat the different IPv6 specific examples; use tcpdump(1) to observe the IPv6 specific traffic (note that since we're tunneling IPv6, you will always see certain IPv4 information in the packets at least on the "normal" (ie non-tunnel) interface as well)
+follow the HE.net IPv6 certification exercises
+Remember to release the elastic IP address you reserved after you are done with this homework assignment -- elastic IP addresses are billed even when not in use!
+
+[Course Website]

@@ -1,0 +1,148 @@
+Bo Yu
+byu1@stevens.edu
+
+HW5
+
+- Create an account at http://www.tunnelbroker.net/
+
+
+- Elastic IP address
+
+	1. Allocating an Elastic IP Addresses for my AWS Account
+	
+		bos-macbook-pro:http_ex boyu2011$ ec2-allocate-address 
+		ADDRESS	23.23.202.185		standard
+		
+	2. Describing Elastic IP Addresses for Account
+	
+		bos-macbook-pro:http_ex boyu2011$ ec2-describe-addresses 
+		ADDRESS	23.23.202.185		standard
+		
+	3. Associating an Elastic IP Address with a Running Instance
+	
+		- find ec2 instance
+		
+			bos-macbook-pro:http_ex boyu2011$ ec2-describe-instances | grep boyu-amazon-linux
+			TAG	instance	i-d81f81bf	Name	boyu-amazon-linux
+		
+		- associate elastic ip address with an ec2 instance
+		
+			bos-macbook-pro:http_ex boyu2011$ ec2-associate-address -i i-d81f81bf 23.23.202.185
+			ADDRESS	23.23.202.185	i-d81f81bf
+		
+		- show ec2 instance status
+		
+			bos-macbook-pro:http_ex boyu2011$ ec2-describe-instances i-d81f81bf
+			RESERVATION	r-7083af13	496436440624	stevens-group
+			INSTANCE	i-d81f81bf	ami-e565ba8c	ec2-23-23-202-185.compute-1.amazonaws.com	ip-10-244-49-121.ec2.internal	running	
+			stevens-key-new	0		
+			t1.micro	2012-04-16T19:04:32+0000us-east-1c	aki-88aa75e1			monitoring-disabled	23.23.202.185	10.244.49.121	ebs					
+			paravirtual	xen		sg-8911c1e1	default
+			BLOCKDEVICE	/dev/sda1	vol-4af65525	2012-04-16T19:04:55.000Z	true
+			TAG	instance	i-d81f81bf	Name	boyu-amazon-linux
+
+
+- set up your IPv6 tunnel to point to your elastic IP
+		
+	http://www.tunnelbroker.net/tunnel_detail.php?tid=156498
+	
+- log in to your EC2 instance and configure it as the IPv6 client endpoint of the tunnel.
+
+	1. HE.net provides configuration examples for how to do that.
+		http://www.tunnelbroker.net/tunnel_detail.php?tid=156498
+		-> Example Configurations
+	
+	2. Run the following commands in EC2 instance shell. (Using sudo)
+	
+		modprobe ipv6
+		ip tunnel add he-ipv6 mode sit remote 209.51.181.2 local 23.23.202.185 ttl 255
+		ip link set he-ipv6 up
+		ip addr add 2001:470:1f10:384::2/64 dev he-ipv6
+		ip route add ::/0 dev he-ipv6
+		ip -f inet6 addr
+	
+	3. Then using the following commands to verify the ipv6 connectivity.
+	
+		- ping6
+		
+			[ec2-user@ip-10-244-49-121 ~]$ ping6 2001:470:1f10:384::2
+			PING 2001:470:1f10:384::2(2001:470:1f10:384::2) 56 data bytes
+			64 bytes from 2001:470:1f10:384::2: icmp_seq=1 ttl=64 time=0.067 ms
+			64 bytes from 2001:470:1f10:384::2: icmp_seq=2 ttl=64 time=0.062 ms
+			64 bytes from 2001:470:1f10:384::2: icmp_seq=3 ttl=64 time=0.068 ms
+			64 bytes from 2001:470:1f10:384::2: icmp_seq=4 ttl=64 time=0.062 ms
+			^C
+			--- 2001:470:1f10:384::2 ping statistics ---
+			4 packets transmitted, 4 received, 0% packet loss, time 3229ms
+			rtt min/avg/max/mdev = 0.062/0.064/0.068/0.010 ms
+		
+		- traceroute6
+		
+			[ec2-user@ip-10-244-49-121 ~]$ traceroute6 2001:470:1f10:384::2
+			traceroute to 2001:470:1f10:384::2 (2001:470:1f10:384::2), 30 hops max, 80 byte packets
+			 1  boyu2011-1-pt.tunnel.tserv9.chi1.ipv6.he.net (2001:470:1f10:384::2)  0.075 ms  0.045 ms  0.010 ms
+			
+		- traceroute6
+		
+		[ec2-user@ip-10-244-49-121 ~]$ traceroute6 ipv6.google.com
+			traceroute to ipv6.google.com (2001:4860:800a::63), 30 hops max, 80 byte packets
+			 1  boyu2011-1.tunnel.tserv9.chi1.ipv6.he.net (2001:470:1f10:384::1)  30.269 ms  35.352 ms  40.407 ms
+			 2  gige-g3-4.core1.chi1.he.net (2001:470:0:6e::1)  48.560 ms  48.559 ms  40.633 ms
+			 3  2001:470:0:bf::2 (2001:470:0:bf::2)  40.297 ms  40.302 ms  40.248 ms
+			 4  2001:4860::1:0:3f7 (2001:4860::1:0:3f7)  78.389 ms  40.221 ms  40.229 ms
+			 5  2001:4860::1:0:5db (2001:4860::1:0:5db)  52.401 ms  68.266 ms  68.218 ms
+			 6  2001:4860::2:0:ba (2001:4860::2:0:ba)  69.233 ms  53.570 ms  53.351 ms
+			 7  2001:4860:0:1::10d (2001:4860:0:1::10d)  63.076 ms 2001:4860:0:1::10f (2001:4860:0:1::10f)  54.341 ms 	
+			    2001:4860:0:1::10d (2001:4860:0:1::10d)  
+				62.961 ms
+			 8  yx-in-x63.1e100.net (2001:4860:800a::63)  53.203 ms  53.404 ms  53.622 ms
+			
+		- tcpdump
+		
+		[ec2-user@ip-10-244-49-121 blog]$ sudo tcpdump -i sit1
+			tcpdump: WARNING: sit1: no IPv4 address assigned
+			tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
+			listening on sit1, link-type RAW (Raw IP), capture size 65535 bytes
+		
+
+- Now that your host is IPv6 enabled, set up the syslogd(8) dæmon to log any and all messages from your instance to the remote syslog server at 2001:470:1c:b8::2. Generate a few test messages and finally generate at least one message saying "<username>'s IPv6 address is <your-global-IPv6-address>" (where <username> is your @stevens.edu username and <your-global-IPv6-address> is the global IPv6 client address of your IPv6 tunnel).
+
+	1. I saw the syslogd daemon is running on the 2001:470:1c:b8::2
+
+		I customized my syslogd by modifing the file /etc/rsyslog.conf 
+		then using the command (sudo /etc/init.d/rsyslog restart) to enable the change affect. 
+
+	2. Generate messages and send to the remote syslog server.
+
+		nc -w0 -u 2001:470:1c:b8::2 514 <<< "byu1's IPv6 address is 2001:470:1f10:384::2"
+
+
+- Finally, using the SSH keypair of which you submitted the public key to me earlier, log in on 2001:470:1c:b8::2 (the server's public SSH RSA key fingerprint is 5a:60:c8:ed:04:ad:ef:70:c7:bd:93:53:ef:62:e2:7b) and verify that your syslog messages have been written to /var/log/messages. Then, extract from that file all <username> - <IPv6-address> pairs.		
+
+	1. Log into 2001:470:1c:b8::2
+
+		[ec2-user@ip-10-244-49-121 ~]$ ssh -i ~/.ssh/stevens-key-new.pem byu1@2001:470:1c:b8::2
+		Last login: Wed Apr 18 14:13:48 2012 from boyu2011-1-pt.tunnel.tserv9.chi1.ipv6.he.net
+
+		       __|  __|_  )
+		       _|  (     /   Amazon Linux AMI
+		      ___|\___|___|
+
+		See /usr/share/doc/system-release/ for latest release notes.
+		There are 21 security update(s) out of 160 total update(s) available
+		Amazon Linux version 2012.03 is available.
+
+	2. Verify that your syslog messages have been written to /var/log/messages
+
+		[byu1@ip-10-242-119-168 ~]$ tail -f /var/log/messages
+		Apr 18 14:55:58 ip-10-242-119-168 sshd[26665]: Accepted publickey for byu1 from 2001:470:1f10:384::2 port 39547 ssh2
+		Apr 18 14:55:58 ip-10-242-119-168 sshd[26665]: pam_unix(sshd:session): session opened for user byu1 by (uid=0)
+
+		Apr 30 03:49:04 boyu2011-1-pt.tunnel.tserv9.chi1.ipv6.he.net byu1's IPv6 address is 2001:470:1f10:384::2
+		
+- A summary of what I learned.
+	
+	This homework is awesome. I learned how to configure a IPv6 environment for a linux machine in the cloud.
+	I also learned how to use some networking tools for IPv6, such as traceroute6, ping6. I learned how to setup syslogd,
+	and how to see the log results.
+	
